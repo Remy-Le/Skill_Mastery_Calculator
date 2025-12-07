@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
+import { ParameterSlider } from "@/components/parameter-slider"
 import { ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -19,21 +20,20 @@ import {
   CartesianGrid,
 } from "recharts"
 
-const MASTERY_HOURS = 10000
-const DEFAULT_PARAMS = {
+import {
+  MASTERY_HOURS,
+  LifestyleParams,
+  getAvailableHours,
+  clampDailyPractice,
+  calculateTimeToMastery,
+  generateChartData,
+} from "@/lib/masteryCalculator"
+const DEFAULT_PARAMS: LifestyleParams = {
   sleep: 8,
   eating: 2,
   shower: 0.5,
   goingOut: 0,
   travel: 1,
-}
-
-interface LifestyleParams {
-  sleep: number
-  eating: number
-  shower: number
-  goingOut: number
-  travel: number
 }
 
 export function MasteryCalculator() {
@@ -43,49 +43,20 @@ export function MasteryCalculator() {
   const [showParameters, setShowParameters] = useState(false)
   const [params, setParams] = useState<LifestyleParams>(DEFAULT_PARAMS)
 
+  // Derived values using pure functions
   const totalOtherActivities = params.sleep + params.eating + params.shower + params.goingOut + params.travel
-  const availableHours = Math.max(0, 24 - totalOtherActivities)
+  const availableHours = getAvailableHours(params)
 
-  if (dailyPractice > availableHours) {
-    setDailyPractice(availableHours)
-  }
+  // Clamp dailyPractice if params change
+  useEffect(() => {
+    setDailyPractice((prev) => clampDailyPractice(prev, availableHours))
+  }, [availableHours])
 
   const practiceValue = dailyPractice.toFixed(2)
   const hoursPerWeek = (dailyPractice * 7).toFixed(1)
 
-  // Calculate days to mastery
-  const remainingHours = Math.max(0, MASTERY_HOURS - currentLevel)
-  const daysToMastery = dailyPractice > 0 ? Math.ceil(remainingHours / dailyPractice) : 0
-  const years = Math.floor(daysToMastery / 365)
-  const remainingDays = daysToMastery % 365
-  const months = Math.floor(remainingDays / 30)
-  const days = remainingDays % 30
-
-  const generateChartData = () => {
-    const data = []
-    const MAX_YEARS_DISPLAY = 28
-    const displayYears = dailyPractice > 0 ? Math.min(Math.ceil(daysToMastery / 365), MAX_YEARS_DISPLAY) : MAX_YEARS_DISPLAY
-
-    let userAccumulatedHours = currentLevel
-    const userHoursPerYear = dailyPractice * 365
-
-    let defaultAccumulatedHours = 0
-    const defaultHoursPerYear = 0.5 * 365 // 0.5 hours per day for default
-
-    for (let i = 0; i <= displayYears; i++) {
-      data.push({
-        time: `Year ${i}`,
-        "Your Projection": Math.min(MASTERY_HOURS, Math.floor(userAccumulatedHours)),
-        "What most people do": Math.min(MASTERY_HOURS, Math.floor(defaultAccumulatedHours)),
-      })
-      userAccumulatedHours += userHoursPerYear
-      defaultAccumulatedHours += defaultHoursPerYear
-    }
-
-    return data
-  }
-
-  const chartData = generateChartData()
+  const { years, months, days, daysToMastery } = calculateTimeToMastery(currentLevel, dailyPractice)
+  const chartData = generateChartData(currentLevel, dailyPractice, daysToMastery)
 
   const handleParameterChange = (key: keyof LifestyleParams, value: number) => {
     setParams((prev) => ({
@@ -93,7 +64,6 @@ export function MasteryCalculator() {
       [key]: Math.max(0, Math.min(24, value)),
     }))
   }
-
   return (
     <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="grid md:grid-cols-2 gap-12">
@@ -186,95 +156,56 @@ export function MasteryCalculator() {
                 <div className="space-y-6 p-4 bg-muted rounded-lg border border-border animate-in fade-in slide-in-from-top-2">
                   <h3 className="font-semibold text-base">Lifestyle Parameters</h3>
 
-                  {/* Sleep */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="sleep" className="text-sm font-medium">
-                        Sleep
-                      </Label>
-                      <span className="text-sm font-semibold text-primary">{params.sleep.toFixed(1)}h</span>
-                    </div>
-                    <Slider
-                      id="sleep"
-                      min={0}
-                      max={12}
-                      step={0.5}
-                      value={[params.sleep]}
-                      onValueChange={(value) => handleParameterChange("sleep", value[0])}
-                    />
-                  </div>
-
-                  {/* Eating */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="eating" className="text-sm font-medium">
-                        Eating
-                      </Label>
-                      <span className="text-sm font-semibold text-primary">{params.eating.toFixed(1)}h</span>
-                    </div>
-                    <Slider
-                      id="eating"
-                      min={0}
-                      max={6}
-                      step={0.25}
-                      value={[params.eating]}
-                      onValueChange={(value) => handleParameterChange("eating", value[0])}
-                    />
-                  </div>
-
-                  {/* Shower */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="shower" className="text-sm font-medium">
-                        Shower
-                      </Label>
-                      <span className="text-sm font-semibold text-primary">{params.shower.toFixed(2)}h</span>
-                    </div>
-                    <Slider
-                      id="shower"
-                      min={0}
-                      max={2}
-                      step={0.25}
-                      value={[params.shower]}
-                      onValueChange={(value) => handleParameterChange("shower", value[0])}
-                    />
-                  </div>
-
-                  {/* Going Out */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="going-out" className="text-sm font-medium">
-                        Going out / Social time
-                      </Label>
-                      <span className="text-sm font-semibold text-primary">{params.goingOut.toFixed(1)}h</span>
-                    </div>
-                    <Slider
-                      id="going-out"
-                      min={0}
-                      max={8}
-                      step={0.25}
-                      value={[params.goingOut]}
-                      onValueChange={(value) => handleParameterChange("goingOut", value[0])}
-                    />
-                  </div>
-
-                  {/* Travel */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <Label htmlFor="travel" className="text-sm font-medium">
-                        Travel time
-                      </Label>
-                      <span className="text-sm font-semibold text-primary">{params.travel.toFixed(1)}h</span>
-                    </div>
-                    <Slider
-                      id="travel"
-                      min={0}
-                      max={8}
-                      step={0.25}
-                      value={[params.travel]}
-                      onValueChange={(value) => handleParameterChange("travel", value[0])}
-                    />
-                  </div>
+                  <ParameterSlider
+                    id="sleep"
+                    label="Sleep"
+                    value={params.sleep}
+                    min={0}
+                    max={12}
+                    step={0.5}
+                    valueDisplay={(v) => `${v.toFixed(1)}h`}
+                    onChange={(v) => handleParameterChange("sleep", v)}
+                  />
+                  <ParameterSlider
+                    id="eating"
+                    label="Eating"
+                    value={params.eating}
+                    min={0}
+                    max={6}
+                    step={0.25}
+                    valueDisplay={(v) => `${v.toFixed(1)}h`}
+                    onChange={(v) => handleParameterChange("eating", v)}
+                  />
+                  <ParameterSlider
+                    id="shower"
+                    label="Shower"
+                    value={params.shower}
+                    min={0}
+                    max={2}
+                    step={0.25}
+                    valueDisplay={(v) => `${v.toFixed(2)}h`}
+                    onChange={(v) => handleParameterChange("shower", v)}
+                  />
+                  <ParameterSlider
+                    id="going-out"
+                    label="Going out / Social time"
+                    value={params.goingOut}
+                    min={0}
+                    max={8}
+                    step={0.25}
+                    valueDisplay={(v) => `${v.toFixed(1)}h`}
+                    onChange={(v) => handleParameterChange("goingOut", v)}
+                  />
+                  <ParameterSlider
+                    id="travel"
+                    label="Travel time"
+                    value={params.travel}
+                    min={0}
+                    max={8}
+                    step={0.25}
+                    valueDisplay={(v) => `${v.toFixed(1)}h`}
+                    onChange={(v) => handleParameterChange("travel", v)}
+                  />
 
                   {/* Summary */}
                   <div className="pt-4 border-t border-border space-y-2">
