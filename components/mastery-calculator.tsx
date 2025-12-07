@@ -45,7 +45,11 @@ export function MasteryCalculator() {
 
   const totalOtherActivities = params.sleep + params.eating + params.shower + params.goingOut + params.travel
   const availableHours = Math.max(0, 24 - totalOtherActivities)
-  const exceedsAvailable = dailyPractice > availableHours
+
+  if (dailyPractice > availableHours) {
+    setDailyPractice(availableHours)
+  }
+
   const practiceValue = dailyPractice.toFixed(2)
   const hoursPerWeek = (dailyPractice * 7).toFixed(1)
 
@@ -66,7 +70,7 @@ export function MasteryCalculator() {
     const userHoursPerYear = dailyPractice * 365
 
     let defaultAccumulatedHours = 0
-    const defaultHoursPerYear = 1 * 365 // 1 hour per day for default
+    const defaultHoursPerYear = 0.5 * 365 // 0.5 hours per day for default
 
     for (let i = 0; i <= displayYears; i++) {
       data.push({
@@ -159,16 +163,6 @@ export function MasteryCalculator() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       You need to practice at least some hours per day to reach mastery.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {exceedsAvailable && (
-                  <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Your selected practice time ({practiceValue}h) exceeds available hours ({availableHours.toFixed(1)}
-                      h). Consider adjusting your lifestyle parameters.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -306,7 +300,7 @@ export function MasteryCalculator() {
         </div>
 
         {/* Right Column: Results */}
-        <div className="sticky top-8 h-min space-y-8">
+        <div className="sticky top-8 h-min space-y-4 min-w-[420px] max-w-[600px] w-full">
           {dailyPractice > 0 && (
             <div className="p-6 bg-primary text-primary-foreground rounded-lg space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div>
@@ -344,7 +338,7 @@ export function MasteryCalculator() {
               <div className="pt-4 border-t border-primary-foreground/20 text-xs opacity-75">
                 <p>
                   <strong>Note:</strong> This is a simplified model assuming consistent daily practice with no breaks.
-                  Actual time may vary based on learning efficiency, breaks, and life circumstances.
+                  {/*Actual time may vary based on learning efficiency, breaks, and life circumstances. */}
                 </p>
               </div>
             </div>
@@ -355,7 +349,7 @@ export function MasteryCalculator() {
             <CardHeader>
               <CardTitle>Projected Progress to 10,000 Hours</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <div className="w-full h-64">
                 <ResponsiveContainer>
                   <AreaChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
@@ -372,8 +366,8 @@ export function MasteryCalculator() {
                     <Area
                       type="monotone"
                       dataKey="Your Projection"
-                      stroke="hsl(var(--primary))"
-                      fill="hsl(var(--primary))"
+                      stroke="#3b82f6"
+                      fill="#3b82f6"
                       fillOpacity={0.3}
                     />
                     <Area

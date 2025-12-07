@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted flex items-start justify-center">
       <MasteryCalculator />
     </main>
   )
