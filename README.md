@@ -1,5 +1,16 @@
 # Skill Mastery calculator
 
+https://v0-skill-mastery-calculator.vercel.app/
+
+## Tech Stack & Versions
+
+| Technology | Version   |
+|------------|-----------|
+| Node.js    | v22.12.0  |
+| Next.js    | 16.0.7    |
+| React      | 19.2.0    |
+
+
 ## Overview
 
 The Skill Mastery Calculator is a web application that helps you estimate the time it will take to master a new skill.
@@ -21,13 +32,13 @@ You can also customize various lifestyle factors to get a more realistic estimat
 First, install the dependencies:
 
 ```bash
-pnpm install
+npm install
 ```
 
 Then, run the development server:
 
 ```bash
-pnpm run dev
+npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
