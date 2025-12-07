@@ -8,6 +8,16 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from "recharts"
 
 const MASTERY_HOURS = 10000
 const DEFAULT_PARAMS = {
@@ -46,6 +56,32 @@ export function MasteryCalculator() {
   const remainingDays = daysToMastery % 365
   const months = Math.floor(remainingDays / 30)
   const days = remainingDays % 30
+
+  const generateChartData = () => {
+    const data = []
+    const MAX_YEARS_DISPLAY = 28
+    const displayYears = dailyPractice > 0 ? Math.min(Math.ceil(daysToMastery / 365), MAX_YEARS_DISPLAY) : MAX_YEARS_DISPLAY
+
+    let userAccumulatedHours = currentLevel
+    const userHoursPerYear = dailyPractice * 365
+
+    let defaultAccumulatedHours = 0
+    const defaultHoursPerYear = 1 * 365 // 1 hour per day for default
+
+    for (let i = 0; i <= displayYears; i++) {
+      data.push({
+        time: `Year ${i}`,
+        "Your Projection": Math.min(MASTERY_HOURS, Math.floor(userAccumulatedHours)),
+        "What most people do": Math.min(MASTERY_HOURS, Math.floor(defaultAccumulatedHours)),
+      })
+      userAccumulatedHours += userHoursPerYear
+      defaultAccumulatedHours += defaultHoursPerYear
+    }
+
+    return data
+  }
+
+  const chartData = generateChartData()
 
   const handleParameterChange = (key: keyof LifestyleParams, value: number) => {
     setParams((prev) => ({
@@ -270,7 +306,7 @@ export function MasteryCalculator() {
         </div>
 
         {/* Right Column: Results */}
-        <div className="sticky top-8 h-min">
+        <div className="sticky top-8 h-min space-y-8">
           {dailyPractice > 0 && (
             <div className="p-6 bg-primary text-primary-foreground rounded-lg space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div>
@@ -313,6 +349,45 @@ export function MasteryCalculator() {
               </div>
             </div>
           )}
+
+          {/* Progress Chart */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Projected Progress to 10,000 Hours</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="w-full h-64">
+                <ResponsiveContainer>
+                  <AreaChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis domain={[0, 10000]} tickFormatter={(value) => value.toLocaleString()} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        borderColor: "hsl(var(--border))",
+                      }}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="Your Projection"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.3}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="What most people do"
+                      stroke="hsl(var(--muted-foreground))"
+                      fill="hsl(var(--muted-foreground))"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
