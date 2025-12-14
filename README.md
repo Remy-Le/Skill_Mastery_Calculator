@@ -1,5 +1,7 @@
 # Skill Mastery calculator
 
+![alt text](public/interface.png)
+
 https://v0-skill-mastery-calculator.vercel.app/
 
 ## Tech Stack & Versions
